@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Code Editor</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Using a modern, readable monospace font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .code-editor {
+            font-family: 'Fira Code', 'Courier New', monospace;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            -o-tab-size: 4;
+        }
+        
+        /* Custom scrollbar for a better aesthetic */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        textarea::-webkit-scrollbar-track {
+            background: #1f2937; /* bg-gray-800 */
+        }
+        
+        textarea::-webkit-scrollbar-thumb {
+            background-color: #4b5563; /* bg-gray-600 */
+            border-radius: 20px;
+            border: 3px solid #1f2937; /* bg-gray-800 */
+        }
+
+        /* Style for the resizer handle */
+        #resizer {
+            width: 8px;
+            cursor: col-resize;
+            background-color: #111827; /* bg-gray-900 */
+            transition: background-color 0.2s ease;
+        }
+        
+        #resizer:hover {
+            background-color: #3b82f6; /* hover:bg-blue-600 */
+        }
+
+        /* Hide the default iframe border */
+        iframe {
+            border: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 overflow-hidden">
+
+    <!-- Main container with flex layout -->
+    <div id="main-container" class="flex h-screen w-screen">
+
+        <!-- Left side: Code Editors -->
+        <div id="code-panel" class="w-1/2 min-w-[300px] flex flex-col bg-gray-800">
+            <!-- Header with tabs -->
+            <header class="flex-shrink-0 bg-gray-900 shadow-md z-10">
+                <nav class="flex space-x-1 p-1">
+                    <button data-lang="html" class="tab-btn bg-blue-600 px-4 py-2 text-sm font-semibold rounded-md shadow-sm focus:outline-none">HTML</button>
+                    <button data-lang="css" class="tab-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 text-sm font-semibold rounded-md shadow-sm focus:outline-none">CSS</button>
+                    <button data-lang="js" class="tab-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 text-sm font-semibold rounded-md shadow-sm focus:outline-none">JavaScript</button>
+                </nav>
+            </header>
+
+            <!-- Editor Textareas -->
+            <div class="relative flex-grow">
+                <textarea id="html-editor" data-lang="html" class="code-editor w-full h-full p-4 bg-transparent resize-none focus:outline-none text-gray-200 leading-relaxed tracking-wide" spellcheck="false"></textarea>
+                <textarea id="css-editor" data-lang="css" class="code-editor w-full h-full p-4 bg-transparent resize-none focus:outline-none text-gray-200 leading-relaxed tracking-wide hidden" spellcheck="false"></textarea>
+                <textarea id="js-editor" data-lang="js" class="code-editor w-full h-full p-4 bg-transparent resize-none focus:outline-none text-gray-200 leading-relaxed tracking-wide hidden" spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <!-- Draggable Resizer -->
+        <div id="resizer" class="flex-shrink-0"></div>
+
+        <!-- Right side: Live Preview -->
+        <div id="preview-panel" class="flex-1 bg-white">
+            <iframe id="preview-frame" class="w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // DOM Element selections
+        const htmlEditor = document.getElementById('html-editor');
+        const cssEditor = document.getElementById('css-editor');
+        const jsEditor = document.getElementById('js-editor');
+        const previewFrame = document.getElementById('preview-frame');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const editors = document.querySelectorAll('.code-editor');
+
+        // Resizer elements
+        const resizer = document.getElementById('resizer');
+        const codePanel = document.getElementById('code-panel');
+
+        // Default code examples
+        const defaultHTML = `<!-- Welcome to the Live Code Editor! -->
+<div class="container">
+    <h1>Hello, World!</h1>
+    <p>You can write HTML, CSS, and JavaScript here.</p>
+    <button id="myButton">Click Me!</button>
+</div>
+`;
+        const defaultCSS = `/* Edit this CSS to style your page */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(45deg, #6d28d9, #4f46e5);
+    color: white;
+}
+
+.container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem 3rem;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+button {
+    background-color: #ec4899;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+button:hover {
+    background-color: #d946ef;
+    transform: scale(1.05);
+}
+`;
+        const defaultJS = `// Add your JavaScript logic here
+const button = document.getElementById('myButton');
+const heading = document.querySelector('h1');
+let clickCount = 0;
+
+button.addEventListener('click', () => {
+    clickCount++;
+    heading.textContent = \`Clicked \${clickCount} times!\`;
+    
+    // Change button color on click
+    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    button.style.backgroundColor = randomColor;
+});
+`;
+
+        // Initialize editors with default content
+        htmlEditor.value = defaultHTML;
+        cssEditor.value = defaultCSS;
+        jsEditor.value = defaultJS;
+
+        let debounceTimeout;
+
+        // Function to render the preview
+        function renderPreview() {
+            const htmlCode = htmlEditor.value;
+            const cssCode = cssEditor.value;
+            const jsCode = jsEditor.value;
+
+            const sourceDocument = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>${cssCode}</style>
+                </head>
+                <body>
+                    ${htmlCode}
+                    <script>${jsCode}<\/script> 
+                </body>
+                </html>
+            `;
+            // Using srcdoc for security and simplicity
+            previewFrame.srcdoc = sourceDocument;
+        }
+
+        // Debounced rendering on keyup
+        [htmlEditor, cssEditor, jsEditor].forEach(editor => {
+            editor.addEventListener('keyup', () => {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(renderPreview, 300);
+            });
+             // Support for tabbing in textareas
+            editor.addEventListener('keydown', function(e) {
+                if (e.key == 'Tab') {
+                    e.preventDefault();
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    // set textarea value to: text before caret + tab + text after caret
+                    this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+                    // put caret at right position again
+                    this.selectionStart = this.selectionEnd = start + 1;
+                }
+            });
+        });
+
+        // Tab switching logic
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const lang = button.dataset.lang;
+
+                // Update button styles
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('bg-blue-600');
+                    btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                });
+                button.classList.add('bg-blue-600');
+                button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+
+                // Show/hide editors
+                editors.forEach(editor => {
+                    if (editor.dataset.lang === lang) {
+                        editor.classList.remove('hidden');
+                    } else {
+                        editor.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        // Resizer drag functionality
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize'; // Change cursor for the whole page
+            
+            // Add listeners to the window to capture mouse movement everywhere
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', stopResize);
+        });
+
+        function handleMouseMove(e) {
+            if (!isResizing) return;
+            // Calculate new width for the code panel
+            const newWidth = e.clientX;
+            // Get window width to calculate percentage
+            const totalWidth = window.innerWidth;
+            
+            // Apply constraints to prevent panels from becoming too small
+            if (newWidth > 300 && newWidth < totalWidth - 300) {
+                 codePanel.style.width = `${newWidth}px`;
+            }
+        }
+
+        function stopResize() {
+            isResizing = false;
+            document.body.style.cursor = 'default'; // Restore default cursor
+            
+            // Clean up event listeners from the window
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', stopResize);
+        }
+        
+        // Initial render on page load
+        window.addEventListener('load', renderPreview);
+
+    </script>
+</body>
+</html>
+
