@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python GUI Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .code-editor {
+            font-family: 'Fira Code', 'Courier New', monospace;
+            tab-size: 4;
+            -moz-tab-size: 4;
+            -o-tab-size: 4;
+        }
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background-color: #4b5563;
+            border-radius: 20px;
+            border: 3px solid #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex flex-col h-screen">
+
+    <header class="bg-gray-800 shadow-md p-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-green-400">Python GUI Editor (Tkinter)</h1>
+        <button id="run-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+            Run
+        </button>
+    </header>
+
+    <div class="flex flex-grow overflow-hidden">
+        <!-- Code Editor Panel -->
+        <div class="w-1/2 flex flex-col p-4">
+            <h2 class="text-lg font-semibold mb-2">Python Code</h2>
+            <div class="relative flex-grow bg-gray-800 rounded-lg shadow-inner">
+                <textarea id="python-editor" class="code-editor w-full h-full p-4 bg-transparent resize-none focus:outline-none text-gray-200" spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <!-- Simulated Preview Panel -->
+        <div class="w-1/2 flex flex-col p-4">
+            <h2 class="text-lg font-semibold mb-2">Simulated Preview</h2>
+            <div id="preview-panel" class="flex-grow bg-gray-200 rounded-lg shadow-inner flex items-center justify-center">
+                <div id="simulated-window" class="hidden bg-white rounded-lg shadow-2xl w-80 h-60 flex flex-col">
+                    <div class="bg-gray-300 p-2 rounded-t-lg text-black text-sm font-semibold flex items-center">
+                        <span class="w-3 h-3 bg-red-500 rounded-full inline-block mr-2"></span>
+                        <span class="w-3 h-3 bg-yellow-500 rounded-full inline-block mr-2"></span>
+                        <span class="w-3 h-3 bg-green-500 rounded-full inline-block mr-2"></span>
+                        <span id="window-title" class="flex-grow text-center">Python App</span>
+                    </div>
+                    <div id="window-content" class="flex-grow p-4 flex flex-col items-center justify-center text-gray-800">
+                        <!-- Content from Python code will be simulated here -->
+                    </div>
+                </div>
+                 <div id="placeholder-text" class="text-gray-500">Click "Run" to see a simulation of the GUI.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pythonEditor = document.getElementById('python-editor');
+        const runBtn = document.getElementById('run-btn');
+        const simulatedWindow = document.getElementById('simulated-window');
+        const windowTitle = document.getElementById('window-title');
+        const windowContent = document.getElementById('window-content');
+        const placeholderText = document.getElementById('placeholder-text');
+
+        const defaultPython = `import tkinter as tk
+
+# Create the main window
+root = tk.Tk()
+root.title("My First App")
+root.geometry("300x200")
+
+# Create a label
+label = tk.Label(root, text="Hello, Tkinter!", font=("Arial", 18))
+label.pack(pady=20)
+
+# Create a button
+button = tk.Button(root, text="Click Me")
+button.pack(pady=10)
+
+# Start the main event loop
+root.mainloop()
+`;
+
+        pythonEditor.value = defaultPython;
+        
+        // Add tabbing support to textarea
+        pythonEditor.addEventListener('keydown', function(e) {
+            if (e.key == 'Tab') {
+                e.preventDefault();
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 1;
+            }
+        });
+
+        runBtn.addEventListener('click', () => {
+            const code = pythonEditor.value;
+            
+            // Clear previous content
+            windowContent.innerHTML = '';
+            placeholderText.classList.add('hidden');
+            simulatedWindow.classList.remove('hidden');
+
+            // --- Basic simulation logic ---
+            // This is a very simplified parser and does not actually execute Python.
+            
+            // Simulate window title
+            const titleMatch = code.match(/root\.title\("([^"]+)"\)/);
+            if (titleMatch && titleMatch[1]) {
+                windowTitle.textContent = titleMatch[1];
+            } else {
+                 windowTitle.textContent = 'Python App';
+            }
+
+            // Simulate a label
+            const labelMatch = code.match(/tk\.Label\(.+text="([^"]+)"/);
+            if (labelMatch && labelMatch[1]) {
+                const labelElement = document.createElement('p');
+                labelElement.textContent = labelMatch[1];
+                labelElement.className = 'text-lg mb-4';
+                windowContent.appendChild(labelElement);
+            }
+            
+            // Simulate a button
+            const buttonMatch = code.match(/tk\.Button\(.+text="([^"]+)"/);
+             if (buttonMatch && buttonMatch[1]) {
+                const buttonElement = document.createElement('button');
+                buttonElement.textContent = buttonMatch[1];
+                buttonElement.className = 'bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600';
+                windowContent.appendChild(buttonElement);
+            }
+        });
+    </script>
+</body>
+</html>
+
